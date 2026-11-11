@@ -63,8 +63,11 @@ window.startApp = function (storage, opts) {
 
   // ---------- draft (per-device convenience) ----------
 
+  // The bill that arrives this month is for last month's usage.
   function defaultMonth() {
     const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
     const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
     return app.getHistory().some(function (h) { return h.month === m; }) ? '' : m;
   }
