@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2443a6">
+  <title>Electricity Split</title>
+  <meta name="description" content="Split the monthly TNB bill among housemates by room sub-meter readings.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Kalam:wght@400;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--
+THESIS: The house's own ledger notebook. Each month is a ruled page, each housemate a written line, what they owe circled in ballpoint. Refuses the card-form-plus-results-table calculator.
+OWN-WORLD: Cool white feint-ruled paper, blue rules, double red margin, ballpoint-blue handwriting (Kalam) for everything the user writes, condensed printed caps (Archivo) for everything the notebook printed, cobalt cover and staples as the binding, red pen only for corrections.
+STORY: The bill-payer copies the bill, writes each room's reading on its line, stamps Submit, and screenshots a page where every amount is circled and the working sits beneath it.
+FIRST VIEWPORT: Cobalt binding with staples; printed title and Month; THE BILL lines; ROOMS lines with present ticks; live common-usage sum in pencil; the Submit stamp below.
+FORM: Buku 555 ledger, my first-ranked candidate (pick), seed 84d09255.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+  <div class="book" id="book">
+    <div class="binding" aria-hidden="true"><span class="staple"></span><span class="staple"></span></div>
+    <section class="page" id="view-entry" aria-labelledby="entry-title"></section>
+    <section class="page" id="view-results" aria-labelledby="results-title" hidden></section>
+    <section class="page" id="view-settings" aria-labelledby="settings-title" hidden></section>
+  </div>
+  <p class="sr-only" aria-live="polite" id="live"></p>
+
+  <script src="src/calc.js"></script>
+  <script src="src/store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

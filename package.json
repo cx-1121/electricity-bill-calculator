@@ -1,0 +1,9 @@
+{
+  "name": "dorm-electricity-split",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Split a monthly TNB bill among housemates by sub-meter readings.",
+  "scripts": {
+    "test": "node --test tests/acceptance.test.js"
+  }
+}
