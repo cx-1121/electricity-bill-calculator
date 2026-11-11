@@ -755,26 +755,30 @@ window.startApp = function (storage, opts) {
 
   // ---------- another device changed the data ----------
 
-  let pendingRefresh = false;
-  function typingHere() {
-    const a = document.activeElement;
-    return !!(a && a.matches && a.matches('input') && views[ui.view].contains(a));
-  }
-  function rerender() {
-    if (ui.view === 'results') return; // a results page is a snapshot of one month
-    render(ui.view);
-  }
+  // Re-render at once, but keep whatever this person has typed and where the caret is.
   function refresh() {
     app = Store.createApp(storage);
-    if (typingHere()) { pendingRefresh = true; return; }
-    rerender();
+    if (ui.view === 'results') return; // a results page is a snapshot of one month
+    const page = views[ui.view];
+    const typed = {};
+    page.querySelectorAll('input[id]:not([type="checkbox"])').forEach(function (el) { typed[el.id] = el.value; });
+    const a = document.activeElement;
+    const focus = a && a.id && page.contains(a)
+      ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null;
+    render(ui.view);
+    Object.keys(typed).forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el && el.type !== 'month') el.value = typed[id];
+    });
+    if (focus) {
+      const el = document.getElementById(focus.id);
+      if (el) {
+        el.focus({ preventScroll: true });
+        try { el.setSelectionRange(focus.s, focus.e); } catch (e) { /* month inputs */ }
+      }
+    }
     say('Updated from another device.');
   }
-  document.addEventListener('focusout', function () {
-    setTimeout(function () {
-      if (pendingRefresh && !typingHere()) { pendingRefresh = false; rerender(); }
-    }, 0);
-  });
 
   return { refresh: refresh };
 };

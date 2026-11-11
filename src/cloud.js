@@ -104,7 +104,8 @@
 
     return new Promise(function (resolve, reject) {
       let first = true;
-      const stop = ref.onSnapshot({ includeMetadataChanges: false }, function (snap) {
+      // Metadata changes too, so the cache -> server handoff updates the status.
+      const stop = ref.onSnapshot({ includeMetadataChanges: true }, function (snap) {
         if (snap.metadata.hasPendingWrites) return; // our own echo
         const next = snap.exists ? snap.data().state : null;
         if (first) {
