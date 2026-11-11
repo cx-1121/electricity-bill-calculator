@@ -1,16 +1,25 @@
 /* Electricity Split: UI layer. All money/validation logic lives in src/calc.js + src/store.js. */
-(function () {
+/*
+ * startApp(storage, opts) is called by boot.js once storage is ready.
+ *   storage: localStorage-shaped object (cloud-backed, or localStorage itself)
+ *   opts.cloud: true when the data is shared through Firestore
+ *   opts.onLeave(): forget this house on this device
+ * Returns { refresh } so boot.js can re-render when another device changes data.
+ */
+window.startApp = function (storage, opts) {
   'use strict';
+  opts = opts || {};
 
   const Calc = window.BillCalc;
   const Store = window.BillStore;
-  const app = Store.createApp();
+  let app = Store.createApp(storage);
   const DRAFT_KEY = 'dormElectricitySplit.draft';
 
   const views = {
     entry: document.getElementById('view-entry'),
     results: document.getElementById('view-results'),
     settings: document.getElementById('view-settings'),
+    gate: document.getElementById('view-gate'),
   };
   const live = document.getElementById('live');
 
@@ -470,6 +479,16 @@
         }
       }
     });
+
+    // this device
+    h += '<div class="line" aria-hidden="true"></div>';
+    h += '<div class="line"><h2 class="sec">This device</h2></div>';
+    if (opts.cloud) {
+      h += '<div class="line"><span class="pencil truncate">Shared: every phone with the passcode sees this.</span></div>';
+      h += '<div class="line"><button class="pen-btn quiet" type="button" data-action="leave-house">Leave this house on this device</button></div>';
+    } else {
+      h += '<div class="line"><span class="pencil truncate">Saved on this device only.</span></div>';
+    }
     h += '</div>';
 
     views.settings.innerHTML = h;
@@ -560,7 +579,8 @@
     const from = ui.view;
     ui.view = view;
     render(view);
-    Object.keys(views).forEach(function (k) { views[k].hidden = k !== view; });
+    ['entry', 'results', 'settings'].forEach(function (k) { views[k].hidden = k !== view; });
+    views.gate.hidden = true;
     const page = views[view];
     page.classList.remove('turn');
     if (!reduceMotion.matches && from !== view) {
@@ -649,6 +669,9 @@
       case 'cancel-delete':
         ui.confirmDelete = false;
         renderSettings(); focusFirst(views.settings, '[data-action="ask-delete"]'); break;
+      case 'leave-house':
+        if (opts.onLeave) opts.onLeave();
+        break;
       case 'confirm-delete': {
         const res = app.deleteLatestMonth();
         ui.confirmDelete = false;
@@ -719,6 +742,7 @@
 
   // ---------- boot ----------
 
+  views.gate.hidden = true;
   const hasResidents = app.getMainFormRows().length > 0;
   if (!hasResidents && app.getHistory().length === 0) {
     ui.adding = true;
@@ -728,4 +752,29 @@
     show('entry', { noFocus: true });
     views.entry.classList.remove('turn');
   }
-})();
+
+  // ---------- another device changed the data ----------
+
+  let pendingRefresh = false;
+  function typingHere() {
+    const a = document.activeElement;
+    return !!(a && a.matches && a.matches('input') && views[ui.view].contains(a));
+  }
+  function rerender() {
+    if (ui.view === 'results') return; // a results page is a snapshot of one month
+    render(ui.view);
+  }
+  function refresh() {
+    app = Store.createApp(storage);
+    if (typingHere()) { pendingRefresh = true; return; }
+    rerender();
+    say('Updated from another device.');
+  }
+  document.addEventListener('focusout', function () {
+    setTimeout(function () {
+      if (pendingRefresh && !typingHere()) { pendingRefresh = false; rerender(); }
+    }, 0);
+  });
+
+  return { refresh: refresh };
+};

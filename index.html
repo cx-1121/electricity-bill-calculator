@@ -21,15 +21,21 @@ FORM: Buku 555 ledger, my first-ranked candidate (pick), seed 84d09255.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
 -->
   <div class="book" id="book">
-    <div class="binding" aria-hidden="true"><span class="staple"></span><span class="staple"></span></div>
-    <section class="page" id="view-entry" aria-labelledby="entry-title"></section>
+    <div class="binding"><span class="staple" aria-hidden="true"></span><span class="staple" aria-hidden="true"></span><span class="sync" id="sync" role="status" aria-live="polite"></span></div>
+    <section class="page" id="view-gate" aria-labelledby="gate-title" hidden></section>
+    <section class="page" id="view-entry" aria-labelledby="entry-title" hidden></section>
     <section class="page" id="view-results" aria-labelledby="results-title" hidden></section>
     <section class="page" id="view-settings" aria-labelledby="settings-title" hidden></section>
   </div>
   <p class="sr-only" aria-live="polite" id="live"></p>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="src/calc.js"></script>
   <script src="src/store.js"></script>
+  <script src="src/cloud.js"></script>
   <script src="app.js"></script>
+  <script src="boot.js"></script>
 </body>
 </html>
