@@ -564,6 +564,39 @@ button { cursor: pointer; }
   .hist-row .pencil { display: none; }
 }
 
+/* ---------- unsaved-changes slip (a torn-off note laid on the page) ---------- */
+
+.slip {
+  width: min(340px, calc(100vw - 32px));
+  padding: 18px 20px 12px 30px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--print);
+  background-color: var(--paper);
+  background-image: linear-gradient(to bottom, transparent calc(var(--rule) - 1px), var(--rule-c) calc(var(--rule) - 1px));
+  background-size: 100% var(--rule);
+  background-position: 0 6px;
+  box-shadow: 0 2px 4px rgba(8, 18, 60, .25), 0 22px 48px -12px rgba(6, 14, 50, .55);
+  transform: rotate(-1deg);
+}
+.slip::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 16px;
+  width: 1px;
+  background: var(--margin-c);
+}
+.slip::backdrop { background: rgba(12, 22, 62, .45); }
+.slip-text {
+  margin: 14px 0 6px;
+  font: 400 19px/1.35 var(--f-ink);
+  color: var(--red);
+}
+.slip-actions { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.slip-actions .pen-btn:first-child { margin-left: -6px; }
+.slip[open] { animation: slip-in .24s var(--ease-out); }
+@keyframes slip-in { from { transform: rotate(-3deg) translateY(10px); } }
+
 /* ---------- motion: turning to a new page ---------- */
 
 .page.turn { animation: turn .62s var(--ease-out); }

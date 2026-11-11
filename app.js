@@ -31,6 +31,7 @@ window.startApp = function (storage, opts) {
     chev: '<svg viewBox="0 0 24 24" class="ico chev" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
     arrow: '<svg viewBox="0 0 22 14" class="ico arrow" aria-hidden="true"><path d="M1 7.5c6-.6 12-.4 18-.2M14.5 2.5 19.5 7l-5 4.6"/></svg>',
     plus: '<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    image: '<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 16l5-5 4 4 2.5-2.5 5.5 5.5"/><circle cx="15.5" cy="9" r="1.6"/></svg>',
     edit: '<svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></svg>',
     tick: '<svg viewBox="0 0 24 24" aria-hidden="true"><path pathLength="100" d="M3.5 13.2c2.2 1.5 3.9 3.5 5.4 5.9 2.9-6.1 6.9-11 11.6-15"/></svg>',
     checked: '<svg viewBox="0 0 24 24" class="ico" aria-hidden="true" style="stroke-width:2.4"><path d="M4 13c2 1.4 3.5 3.3 4.9 5.5C11.6 12.8 15.2 8.2 20 4.6"/></svg>',
@@ -370,6 +371,8 @@ window.startApp = function (storage, opts) {
     h += '<span class="val num"><small>RM</small> ' + rm(r.totalPaidSen) + '</span></div>';
     h += '<div class="line" aria-hidden="true"></div>';
 
+    h += '<div class="line"><button class="pen-btn" type="button" data-action="save-image">' + I.image + 'Save report image</button>';
+    h += '<span class="pencil right" id="image-status" aria-live="polite"></span></div>';
     h += '<div class="line">';
     if (m.fromHistory) {
       h += '<button class="pen-btn" type="button" data-action="settings">' + I.back + 'Back to history</button>';
@@ -521,6 +524,7 @@ window.startApp = function (storage, opts) {
     }
     renderSettings();
     focusFirst(views.settings, errors.length ? '#ed-name' : '[data-action="edit"][data-id="' + CSS.escape(id) + '"]');
+    return errors.length === 0;
   }
 
   function addResident() {
@@ -529,7 +533,7 @@ window.startApp = function (storage, opts) {
       ui.addErrors = res.errors.map(function (e) { return e.message; });
       renderSettings();
       focusFirst(views.settings, '#add-name');
-      return;
+      return false;
     }
     if (res.saveError) ui.notice = res.saveError;
     ui.addErrors = [];
@@ -538,7 +542,112 @@ window.startApp = function (storage, opts) {
     const n = document.getElementById('add-name');
     if (n) n.focus();
     say(res.resident.name + ' added.');
+    return true;
   }
+
+  // ---------- report image ----------
+
+  async function saveReportImage(btn) {
+    const status = document.getElementById('image-status');
+    if (!ui.result || !window.ReportImage) return;
+    btn.disabled = true;
+    status.textContent = 'Drawing…';
+    try {
+      const blob = await window.ReportImage.render(ui.result, ui.meta || {});
+      const name = 'electric-bill-' + ((ui.meta && ui.meta.month) || 'report') + '.png';
+      const file = new File([blob], name, { type: 'image/png' });
+      // Phones: open the share sheet (WhatsApp, Photos…). Elsewhere: download.
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'Electric bill ' + monthName((ui.meta || {}).month) });
+          status.textContent = 'Shared';
+        } catch (e) {
+          status.textContent = e && e.name === 'AbortError' ? '' : 'Couldn’t share';
+        }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        status.textContent = 'Saved ' + name;
+      }
+    } catch (e) {
+      console.error(e);
+      status.textContent = 'Couldn’t make the image';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- unsaved changes guard ----------
+
+  function unsavedWork() {
+    if (ui.view !== 'settings') return null;
+    if (ui.editing) {
+      const nameEl = document.getElementById('ed-name');
+      const prevEl = document.getElementById('ed-prev');
+      const state = app.getState();
+      const r = state.residents.find(function (x) { return x.id === ui.editing; });
+      if (!r || !nameEl || !prevEl) return null;
+      const prev = Store.getPreviousReading(state, r.id);
+      const changed = nameEl.value.trim() !== r.name || Calc.parseNumber(prevEl.value) !== prev;
+      return changed ? { kind: 'edit', id: r.id, name: r.name } : null;
+    }
+    if (ui.adding) {
+      const n = document.getElementById('add-name');
+      const v = document.getElementById('add-reading');
+      if (n && v && (n.value.trim() || v.value.trim())) return { kind: 'add', name: n.value.trim() };
+    }
+    return null;
+  }
+
+  // Controls that resolve the edit themselves never trigger the guard.
+  const GUARD_SAFE = new Set(['save-edit', 'cancel-edit', 'remove', 'add', 'cancel-add']);
+  const dlg = document.getElementById('unsaved');
+  let dlgProceed = null;
+  let dlgWork = null;
+
+  function askUnsaved(work, proceed) {
+    dlgWork = work;
+    dlgProceed = proceed;
+    document.getElementById('unsaved-text').textContent = work.kind === 'edit'
+      ? 'You changed ' + work.name + ' but didn’t save.'
+      : (work.name || 'This housemate') + ' hasn’t been added yet.';
+    dlg.querySelector('[data-unsaved="save"]').textContent = work.kind === 'edit' ? 'Save changes' : 'Add now';
+    if (typeof dlg.showModal === 'function') dlg.showModal();
+    else if (window.confirm(document.getElementById('unsaved-text').textContent + ' Save it?')) resolveUnsaved('save');
+    else resolveUnsaved('discard');
+  }
+
+  function resolveUnsaved(choice) {
+    if (dlg.open) dlg.close();
+    const work = dlgWork, proceed = dlgProceed;
+    dlgWork = dlgProceed = null;
+    if (!work) return;
+    if (choice === 'save') {
+      const ok = work.kind === 'edit' ? saveEdit(work.id) : addResident();
+      if (!ok) return; // errors are now shown in red pen; stay here
+      if (work.kind === 'add') ui.adding = false;
+      proceed();
+    } else if (choice === 'discard') {
+      ui.editing = null; ui.editErrors = [];
+      ui.adding = false; ui.addErrors = [];
+      proceed();
+    } else {
+      focusFirst(views.settings, work.kind === 'edit' ? '#ed-prev' : '#add-name');
+    }
+  }
+
+  dlg.addEventListener('click', function (ev) {
+    const b = ev.target.closest('[data-unsaved]');
+    if (b) resolveUnsaved(b.dataset.unsaved);
+  });
+  dlg.addEventListener('cancel', function (ev) { ev.preventDefault(); resolveUnsaved('keep'); });
+
+  window.addEventListener('beforeunload', function (ev) {
+    if (unsavedWork()) { ev.preventDefault(); ev.returnValue = ''; }
+  });
 
   function openHistory(i) {
     const m = app.getHistory()[i];
@@ -598,8 +707,16 @@ window.startApp = function (storage, opts) {
 
   document.addEventListener('click', function (ev) {
     const t = ev.target.closest('[data-action], [data-payee], [data-history]');
-    if (!t) return;
+    if (!t || t.closest('#unsaved')) return;
+    const work = unsavedWork();
+    if (work && !GUARD_SAFE.has(t.dataset.action)) {
+      askUnsaved(work, function () { handle(t); });
+      return;
+    }
+    handle(t);
+  });
 
+  function handle(t) {
     if (t.dataset.payee) {
       const id = t.dataset.payee;
       const open = t.getAttribute('aria-expanded') !== 'true';
@@ -681,8 +798,9 @@ window.startApp = function (storage, opts) {
         say('Latest month deleted. Previous readings restored.');
         break;
       }
+      case 'save-image': saveReportImage(t); break;
     }
-  });
+  }
 
   document.addEventListener('input', function (ev) {
     const el = ev.target;

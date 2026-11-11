@@ -29,12 +29,23 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   </div>
   <p class="sr-only" aria-live="polite" id="live"></p>
 
+  <dialog class="slip" id="unsaved" aria-labelledby="unsaved-title">
+    <h2 class="sec" id="unsaved-title">Unsaved changes</h2>
+    <p class="slip-text" id="unsaved-text"></p>
+    <div class="slip-actions">
+      <button class="pen-btn" type="button" data-unsaved="save">Save changes</button>
+      <button class="pen-btn danger" type="button" data-unsaved="discard">Discard</button>
+      <button class="pen-btn quiet" type="button" data-unsaved="keep">Keep editing</button>
+    </div>
+  </dialog>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="src/calc.js"></script>
   <script src="src/store.js"></script>
   <script src="src/cloud.js"></script>
+  <script src="report.js"></script>
   <script src="app.js"></script>
   <script src="boot.js"></script>
 </body>
